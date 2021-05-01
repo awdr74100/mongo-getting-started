@@ -364,3 +364,32 @@ $ db.users.insertOne({ name: "Jack" }, { writeConcern: { w: 1, j: false }}) # de
 $ db.users.insertOne({ name: "Michael" }, { writeConcern: { w: 1, j: true }})
 $ db.users.insertOne({ name: "Rebecca" }, { writeConcern: { w: 1, j: true, wtimeout: 200 }})
 ```
+
+### 匯入資料
+
+> 需額外下載 [MongoDB Database Tools](https://www.mongodb.com/try/download/database-tools)
+
+```shell
+$ mongoimport --file .\users.json --db shop --collection users --jsonArray --drop
+```
+
+```json
+[
+  {
+    "name": "Ian",
+    "age": 17,
+    "skills": ["basketball", "football"],
+    "site": {
+      "href": "..."
+    }
+  },
+  {
+    "name": "Eric",
+    "age": 19,
+    "skills": ["baseball"],
+    "site": {
+      "href": "..."
+    }
+  }
+]
+```
