@@ -197,15 +197,15 @@ $ db.users.findOne({ name: "Ian" }).oauth.google.kind[0]
 
 ---
 
-$ db.users.find({ "oauth.google.kind": ["aaa", "bbb"] }).pretty() # 匹配陣列 (符合順序，項目，長度)
-$ db.users.find({ "oauth.google.kind": { $all: ["bbb", "aaa"] }}).pretty() # 匹配陣列 (符合項目)
-$ db.users.find({ "oauth.google.kind": "ccc" }).pretty() # 匹配項目
+$ db.users.find({ "oauth.google.kind": ["aaa", "bbb"] }).pretty() # 匹配陣列 (匹配順序，項目，長度)
+$ db.users.find({ "oauth.google.kind": { $all: ["bbb", "aaa"] }}).pretty() # 匹配陣列 (至少匹配對象)
+$ db.users.find({ "oauth.google.kind": "ccc" }).pretty() # 匹配項目 (至少匹配一個項目)
 
 ---
 
 $ db.users.find({ "oauth.google.kind.0": "aaa" }).pretty()
 $ db.users.find({ "oauth.google.kind.0": { $gte: 30 }}).pretty()
-$ db.users.find({ "oauth.google.kind": { $gte: 30 }}).pretty()
+$ db.users.find({ "oauth.google.kind": { $gte: 30 }}).pretty() # 匹配項目 (至少匹配一個項目)
 ```
 
 ### 關聯查詢
@@ -392,4 +392,46 @@ $ mongoimport --file .\users.json --db shop --collection users --jsonArray --dro
     }
   }
 ]
+```
+
+### 比較運算符
+
+```shell
+$ db.movies.find({ runtime: { $eq: 60 }}) # 匹配等於指定值的值
+$ db.movies.find({ runtime: { $ne: 60 }}) # 匹配不等於指定值的值
+$ db.movies.find({ runtime: { $lt: 42 }}) # 匹配小於指定值的值
+$ db.movies.find({ runtime: { $lte: 42 }}) # 匹配小於等於指定值的值
+$ db.movies.find({ runtime: { $gt: 42 }}) # 匹配大於指定值的值
+$ db.movies.find({ runtime: { $gte: 42 }}) # 匹配大於等於指定值的值
+$ db.movies.find({ runtime: { $in: [30, 42] }}) # 匹配數組指定的任何值 (其次使用 $or)
+$ db.movies.find({ runtime: { $nin: [30, 42] }}) # 不匹配數組指定的任何值 (其次使用 $or)
+
+--- Array
+
+$ db.movies.find({ genres: { $in: ["Drama", "Action"] }}) # 匹配數組指定的任何值 (如同 $or，不考慮順序)
+$ db.movies.find({ genres: { $all: ["Drama", "Action"] }}) # 匹配數組指定的所有值 (如同 $and，不考慮順序)
+```
+
+### 邏輯運算符
+
+```shell
+$ db.movies.find({ $or: [{ "rating.average": { $lt: 5 }}, { "rating.average": { $gt: 9.3 }}] }) # 返回任一條件匹配 => (a || b)
+$ db.movies.find({ $nor: [{ "rating.average": { $lt: 5 }}, { "rating.average": { $gt: 9.3 }}] }) # 返回所有條件均不匹配 => !(a || b)
+$ db.movies.find({ $and: [{ "rating.average": { $gt: 9 }}, { genres: "Drama" }] }) # 返回全部條件匹配 => (a && b)
+$ db.movies.find({ runtime: { $not: { $eq: 60 }}}) # 返回條件不匹配 (反轉表達式效果) => !a
+
+--- Exception
+
+$ db.movies.find({ "rating.average": { $gt: 9 }, genres: "Drama" }) # 同 $and
+$ db.movies.find({ genres: "Horror", genres: "Drama" }) # 避免使用 (相同 key 會蓋掉前面的)
+$ db.movies.find({ $and: [{ genres: "Drama" }, { genres: "Horror" }] }) # 使用 $and (推薦)
+$ db.movies.find({ genres: { $all: ["Horror", "Drama"] }}) # 使用 $all (推薦)
+```
+
+### 元素運算符
+
+```shell
+$ db.users.find({ age: { $exists: true, $ne: null }}) # 確認元素是否存在 (empty 為不存在，null 為存在)
+$ db.users.find({ phone: { $type: "string" } }) # 確認元素 BSON 型態 (接受別名、數字)
+$ db.users.find({ phone: { $type: ["number", "string"] }}) # 確認元素 BSON 型態 (接受多個型態)
 ```
