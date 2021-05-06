@@ -179,6 +179,7 @@ $ db.users.replaceOne({ _id: ObjectId("60870836596fc1c0e327e09f") }, { age: 23, 
 ```shell
 $ db.users.updateOne({ _id: ObjectId("60870836596fc1c0e327e09f") }, { $set: { "oauth.google.kind": ["aaa", "bbb"] }})
 $ db.users.updateOne({ name: "Ian" }, { $set: { "oauth.google.kind.0": 30 }})
+$ db.users.updateOne({ name: "Owen" }, { $set: { "hobbies.0.frequency": 6 }}) # 物件陣列內屬性存取方式
 
 ---
 
@@ -197,8 +198,8 @@ $ db.users.findOne({ name: "Ian" }).oauth.google.kind[0]
 
 ---
 
-$ db.users.find({ "oauth.google.kind": ["aaa", "bbb"] }).pretty() # 匹配陣列 (匹配順序，項目，長度)
-$ db.users.find({ "oauth.google.kind": { $all: ["bbb", "aaa"] }}).pretty() # 匹配陣列 (至少匹配對象)
+$ db.users.find({ "oauth.google.kind": ["aaa", "bbb"] }).pretty() # 匹配陣列 (完全符合陣列)
+$ db.users.find({ "oauth.google.kind": { $all: ["bbb", "aaa"] }}).pretty() # 匹配陣列 (只在乎內容須都被包含)
 $ db.users.find({ "oauth.google.kind": "ccc" }).pretty() # 匹配項目 (至少匹配一個項目)
 
 ---
@@ -206,6 +207,7 @@ $ db.users.find({ "oauth.google.kind": "ccc" }).pretty() # 匹配項目 (至少�
 $ db.users.find({ "oauth.google.kind.0": "aaa" }).pretty()
 $ db.users.find({ "oauth.google.kind.0": { $gte: 30 }}).pretty()
 $ db.users.find({ "oauth.google.kind": { $gte: 30 }}).pretty() # 匹配項目 (至少匹配一個項目)
+$ db.users.find({ "hobbies.frequency": { $lte: 4 }}) # 物件陣列存取方式
 ```
 
 ### 關聯查詢
@@ -434,4 +436,29 @@ $ db.movies.find({ genres: { $all: ["Horror", "Drama"] }}) # 使用 $all (推薦
 $ db.users.find({ age: { $exists: true, $ne: null }}) # 確認元素是否存在 (empty 為不存在，null 為存在)
 $ db.users.find({ phone: { $type: "string" } }) # 確認元素 BSON 型態 (接受別名、數字)
 $ db.users.find({ phone: { $type: ["number", "string"] }}) # 確認元素 BSON 型態 (接受多個型態)
+```
+
+### 評估運算符
+
+```shell
+$ db.movies.find({ summary: { $regex: /musical/ }}) # 使用正規表達式搜尋
+$ db.sales.find({ $expr: { $gt: ["$volume", "$target"] }}) # 使用聚合表達式
+
+--- Advance
+
+$ db.sales.find({ $expr: { $gt: [{ $cond: { if: { $gte: ["$volume", 190]}, then: { $subtract: ["$volume", 10] }, else: "$volume"}}, "$target"] }})
+```
+
+### 數組運算符號
+
+```shell
+$ db.users.find({ hobbies: { $size: 2 }}) # 匹配陣列為指定長度 (無法處理大於或小於)
+$ db.movies.find({ genre: { $all: ["action", "thriller"] }}) # 匹配陣列 (只在乎內容須都被包含)
+$ db.users.find({ hobbies: { $elemMatch: { title: "Sports", frequency: { $gte: 6 }}}}) # 匹配同一項目的內容 (避免判斷到不同對象，參考下方)
+
+--- Exception
+
+$ db.users.find({ $and: [{ "hobbies.title": "Sports" }, { "hobbies.frequency": { $gte: 3 }}] }) # 判斷到不同對象
+$ db.inventory.find( { dim_cm: { $gt: 15, $lt: 20 }}) # 各條件遍歷判斷 ([~] > 15 && [~] < 20)
+$ db.inventory.find( { dim_cm: { $elemMatch: { $gt: 15, $lt: 20 } } } ) # 所有條件遍歷判斷 ([1] > 15 && [1] < 20)
 ```
