@@ -84,6 +84,12 @@ $ db.users.drop()
 $ db.users.stats()
 ```
 
+### 重命名 Collection
+
+```shell
+$ db.users.renameCollection("groups")
+```
+
 ### 指定 Collection 插入 Document
 
 > 重複 id 時會引發錯誤，Document 不會被插入
@@ -449,7 +455,7 @@ $ db.sales.find({ $expr: { $gt: ["$volume", "$target"] }}) # 使用聚合表達�
 $ db.sales.find({ $expr: { $gt: [{ $cond: { if: { $gte: ["$volume", 190]}, then: { $subtract: ["$volume", 10] }, else: "$volume"}}, "$target"] }})
 ```
 
-### 數組運算符號
+### 數組運算符
 
 ```shell
 $ db.users.find({ hobbies: { $size: 2 }}) # 匹配陣列為指定長度 (無法處理大於或小於)
@@ -459,6 +465,32 @@ $ db.users.find({ hobbies: { $elemMatch: { title: "Sports", frequency: { $gte: 6
 --- Exception
 
 $ db.users.find({ $and: [{ "hobbies.title": "Sports" }, { "hobbies.frequency": { $gte: 3 }}] }) # 判斷到不同對象
-$ db.inventory.find( { dim_cm: { $gt: 15, $lt: 20 }}) # 各條件遍歷判斷 ([~] > 15 && [~] < 20)
-$ db.inventory.find( { dim_cm: { $elemMatch: { $gt: 15, $lt: 20 } } } ) # 所有條件遍歷判斷 ([1] > 15 && [1] < 20)
+$ db.inventory.find({ dim_cm: { $gt: 15, $lt: 20 }}) # 各條件遍歷判斷 ([~] > 15 && [~] < 20)
+$ db.inventory.find({ dim_cm: { $elemMatch: { $gt: 15, $lt: 20 }}}) # 所有條件遍歷判斷 ([1] > 15 && [1] < 20)
+```
+
+### 游標方法
+
+> MongoDB Shell 只會返回前 20 個文檔 (性能考量，參考下方更改)
+
+> print()、print(tojson())、printjson() 皆為 MongoDB Shell 方法
+
+```shell
+$ db.movies.find().count() # 返回文檔總數
+$ db.movies.find().pretty() # 返回格式化結果
+$ db.movies.find().toArray() # 返回數組化結果 (全部文檔)
+$ db.movies.find().next() # 返回下一個文檔
+$ db.movies.find().forEach(doc => printjson(doc)) # 遍歷文檔
+$ db.movies.find().hasNext() # 確認下一個文檔是否存在 (通常用於變數)
+$ db.movies.find().sort({ "rating.average": -1, runtime: -1 }) # 返回排序後的文檔 (1 代表升序，-1 代表降序)
+$ db.movies.find().skip(2) # 返回跳過文檔數量後結果
+$ db.movies.find().limit(2) # 返回限制文檔數量後結果 (0 等效於沒有設置)
+$ db.movies.find().batchSize(200) # 設置每批響應要返回的文檔數 (注意超時，可從 Wireshark 確認)
+---
+
+$ DBQuery.shellBatchSize = 30 # 設置 MongoDB Shell 批處理大小 (預設為 20)
+
+---
+
+$ db.users.find().sort({ index: -1, _id: -1 }).skip(5).limit(3) # 分頁實現
 ```
