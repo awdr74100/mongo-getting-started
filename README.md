@@ -525,10 +525,15 @@ $ db.equipment.find({ "logs.member": ObjectId("60a54ff1617882583771b983") }, { "
 ---
 
 $ db.users.find({},{ array: { $elemMatch: {}}}) # 投影數組中與指定 $elemMatch 條件匹配的第一個元素 (此為皆不匹配)
-$ db.users.find({},{ array: { $elemMatch: { $eq: "red" }}}) # 同上 (元素可能有所不同)
-$ db.users.find({},{ array: { $elemMatch: { $in: ["pink", "red"] }}}) # 同上 (元素可能有所不同)
+$ db.users.find({},{ array: { $elemMatch: { $eq: "red" }}}) # 同上 (元素可能不同)
+$ db.users.find({},{ array: { $elemMatch: { $in: ["pink", "red"] }}}) # 同上 (元素可能不同)
 $ db.equipment.find({}, { logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983") } }}) # 嵌套
-$ db.equipment.find({}, { name: 1, logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983"), startAt: { $gte: ISODate("2021-05-21T07:57:00.046Z") }}}})
+$ db.equipment.find({}, { name: 1, logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983"), startAt: { $gte: ISODate("2021-05-21T07:57:00.046Z") }}}}) # 嵌套
 
 ---
+
+$ db.users.find({}, { array:{ $slice: 2 }}) # 限制從數組投影的元素數量 (正數為從第一個開始計算)(包含或排除將影響其他字段)
+$ db.users.find({}, { array:{ $slice: -2 }}) # 同上 (負數為從最後一個開始計算)
+$ db.users.find({}, { array:{ $slice: [1, 2] }}) # 同上 (正數為從第一個開始計算，第二個參數填入數量，趨近於 ∞)
+$ db.users.find({}, { array: { $slice: [-2, 1] }}) # 同上 (負數為從最後一個開始計算，第二個參數填入數量，趨近於 0)
 ```
