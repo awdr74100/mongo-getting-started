@@ -483,7 +483,7 @@ $ db.movies.find().next() # 返回下一個文檔
 $ db.movies.find().forEach(doc => printjson(doc)) # 遍歷文檔
 $ db.movies.find().hasNext() # 確認下一個文檔是否存在 (通常用於變數)
 $ db.movies.find().sort({ "rating.average": -1, runtime: -1 }) # 返回排序後的文檔 (1 代表升序，-1 代表降序)
-$ db.movies.find().skip(2) # 返回跳過文檔數量後結果
+$ db.movies.find().skip(2) # 返回跳過文檔數量後結果 (0 等同於沒有設置)
 $ db.movies.find().limit(2) # 返回限制文檔數量後結果 (0 等效於沒有設置)
 $ db.movies.find().batchSize(200) # 設置每批響應要返回的文檔數 (注意超時，可從 Wireshark 確認)
 ---
@@ -493,4 +493,42 @@ $ DBQuery.shellBatchSize = 30 # 設置 MongoDB Shell 批處理大小 (預設為 
 ---
 
 $ db.users.find().sort({ index: -1, _id: -1 }).skip(5).limit(3) # 分頁實現
+```
+
+### 使用投影 (Projection)
+
+> 除非 \_id 字段明確排除，否則皆返回 \_id 屬性
+
+```shell
+$ db.equipment.find({}, { name: 1, alias: true }) # 指定包含字段 (設置為 1 或 true)
+$ db.equipment.find({}, { timing: 0, net: 0, logs: false, _id: 0 }) # 指定排除字段 (設置為 0 或 false)
+
+--- Nested
+$ db.equipment.find({}, { name: 1, "logs.member": 1 }) # 嵌入式文檔 (陣列)
+$ db.users.find({}, { "name.first": 1 }) # 嵌入式文檔 (物件)
+
+--- Exception
+
+$ db.equipment.find({}, { name: 1, net: 0 }) # 錯誤！！ (參考下方例子)
+$ db.equipment.find({}, { name: 1, _id: 0 }) # 包含與排除無法共用，_id 字段例外 (即設為排除)
+$ db.equipment.find({}, { name: 0, _id: 1 }) # 包含與排除無法共用，_id 字段例外 (預設即為包含)
+```
+
+### 投影運算子
+
+```shell
+$ db.users.find({ array: "red" }, { "array.$": 1 }) # 投影數組中與查詢匹配的第一個元素 (查詢必須存在數組，無論自身或其他，返回空例外)
+$ db.users.find({ array: { $all: ["red", "black"] }}, { "array.$": 1 }) # 同上 (元素可能不同)
+$ db.users.find({ array: { $in: ["pink", "red"] }}, { "array.$": 1 }) # 同上 (元素可能不同)
+$ db.equipment.find({ "logs.member": ObjectId("60a54ff1617882583771b983") }, { "logs.$": 1 }) # 嵌套
+
+---
+
+$ db.users.find({},{ array: { $elemMatch: {}}}) # 投影數組中與指定 $elemMatch 條件匹配的第一個元素 (此為皆不匹配)
+$ db.users.find({},{ array: { $elemMatch: { $eq: "red" }}}) # 同上 (元素可能有所不同)
+$ db.users.find({},{ array: { $elemMatch: { $in: ["pink", "red"] }}}) # 同上 (元素可能有所不同)
+$ db.equipment.find({}, { logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983") } }}) # 嵌套
+$ db.equipment.find({}, { name: 1, logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983"), startAt: { $gte: ISODate("2021-05-21T07:57:00.046Z") }}}})
+
+---
 ```
