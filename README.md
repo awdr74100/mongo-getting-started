@@ -363,6 +363,8 @@ $ db.posts.insertOne({
 })
 ```
 
+---
+
 ### Write Concern
 
 ```shell
@@ -401,6 +403,8 @@ $ mongoimport --file .\users.json --db shop --collection users --jsonArray --dro
   }
 ]
 ```
+
+---
 
 ### 比較運算符
 
@@ -537,3 +541,5 @@ $ db.users.find({}, { array: { $slice: -2 }}) # 同上 (負數為從最後一個
 $ db.users.find({}, { array: { $slice: [1, 2] }}) # 同上 (正數為從第一個開始計算，第二個參數填入數量，趨近於 ∞)
 $ db.users.find({}, { array: { $slice: [-2, 1] }}) # 同上 (負數為從最後一個開始計算，第二個參數填入數量，趨近於 0)
 ```
+
+---
