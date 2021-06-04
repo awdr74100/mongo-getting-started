@@ -570,5 +570,5 @@ $ db.users.updateOne({ name: "Manuel" }, { $rename: { "oauth.github": "oauth.goo
 
 --- Parameters
 
-$ db.users.updateOne({ name: "Maria", age: 29 }, { $set: { isSporty: true }}, { upsert: true }) # 在過濾器無匹配時插入文檔 (包含更新字段與唯一索引字段)(運算符以不存在處理)(預設為 false)
+$ db.users.updateOne({ name: "Maria", age: 29 }, { $set: { isSporty: true }}, { upsert: true }) # 在過濾器無匹配時選擇插入文檔 (包含更新字段與唯一索引字段)(運算符以不存在處理)(預設為 false)
 ```
