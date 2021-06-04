@@ -571,4 +571,6 @@ $ db.users.updateOne({ name: "Manuel" }, { $rename: { "oauth.github": "oauth.goo
 --- Parameters
 
 $ db.users.updateOne({ name: "Maria", age: 29 }, { $set: { isSporty: true }}, { upsert: true }) # 在過濾器無匹配時選擇插入文檔 (包含更新字段與唯一索引字段)(運算符以不存在處理)(預設為 false)
+$ db.sports.updateMany({}, { $set: { title: "Football", requireTeam: true }}, { upsert: true }) # 同上 (同樣適用於 updateMany，在無匹配時插入一個新文檔)
+$ db.sports.updateMany({ v: { $gt: 4 }}, { $set: { title: "Basketball" }}, { upsert: true }) # 同上 (v 不為唯一索引值，故單純插入 title)
 ```
