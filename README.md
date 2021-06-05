@@ -555,7 +555,7 @@ $ db.users.find({}, { array: { $slice: [-2, 1] }}) # 同上 (負數為從最後�
 > 均支持數組、嵌入文檔、文檔數組
 
 ```shell
-$ db.users.updateOne({ name: "Chris" }, { $set: { name: "sharon" }}) # 根據頂級字段更新其值 (不存在即創建)
+$ db.users.updateOne({ name: "Chris" }, { $set: { name: "Sharon" }}) # 根據頂級字段更新其值 (不存在即創建)
 $ db.users.updateMany({ "hobbies.title": "Sports" }, { $unset: { isSporty: "" } }) # 根據頂級字段刪除其值 (任意輸入值)(陣列項目變為 null)(不存在不做更動)
 $ db.users.updateOne({ name: "Manuel" }, { $inc: { age: 1, qty: -2 }}) # 根據頂級字段增加其值 (接受正值和負值)(不存在即創建)
 $ db.users.updateOne({ name: "Chris" }, { $min: { age: 33 }}) # 根據頂級字段變小其值 (僅當指定值小於現有字段值才更新其值)(不存在即創建)
@@ -568,9 +568,10 @@ $ db.users.updateMany({}, { $rename: { age: "totalAge" }}) # 根據頂級字段�
 $ db.users.updateOne({ name: "Manuel" }, { $inc: { age: -3 }, $unset: { num: "", count: "" }}) # 運算符可結合使用 (同字段會產生錯誤)
 $ db.users.updateOne({ name: "Manuel" }, { $rename: { "oauth.github": "oauth.google" }}) # 嵌套重命名須包含完整路徑 (不支持文檔數組)
 
---- Parameters
+--- upsert
 
 $ db.users.updateOne({ name: "Maria", age: 29 }, { $set: { isSporty: true }}, { upsert: true }) # 在過濾器無匹配時選擇插入文檔 (包含更新字段與唯一索引字段)(運算符以不存在處理)(預設為 false)
 $ db.sports.updateMany({}, { $set: { title: "Football", requireTeam: true }}, { upsert: true }) # 同上 (同樣適用於 updateMany，在無匹配時插入一個新文檔)
 $ db.sports.updateMany({ v: { $gt: 4 }}, { $set: { title: "Basketball" }}, { upsert: true }) # 同上 (v 不為唯一索引值，故單純插入 title)
+$ db.users.updateOne({ name: "Maria" }, { $set: { name: "Sharon" }}, { upsert: true }) # 同上 (相同字段時，更新字段將覆蓋唯一索引字段)
 ```
