@@ -568,7 +568,15 @@ $ db.users.updateMany({}, { $rename: { age: "totalAge" }}) # 根據頂級字段�
 $ db.users.updateOne({ name: "Manuel" }, { $inc: { age: -3 }, $unset: { num: "", count: "" }}) # 運算符可結合使用 (同字段會產生錯誤)
 $ db.users.updateOne({ name: "Manuel" }, { $rename: { "oauth.github": "oauth.google" }}) # 嵌套重命名須包含完整路徑 (不支持文檔數組)
 
---- upsert
+--- array
+
+$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 2 }}}}, { $set: { name: "Sharon", "colors.$.v": 1, "colors.$.color": "pink" }}) # 使用 $ 充當數組匹配到的第一個項目
+$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$": { color: "blue", v: 2 } }}) # 同上
+$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$": { color: "blue", v: 2, a: 1 } }}) # 同上 (新增字段)
+$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$.a": 1 }}) # 同上 (新增字段)
+$ db.sports.updateMany({ nums: { $elemMatch: { $gte: 6 }}}, { $set: { "nums.$": 100, isVerify: true }}) # 同上 (同樣適用於 updateMany)
+
+--- upsert (Parameters)
 
 $ db.users.updateOne({ name: "Maria", age: 29 }, { $set: { isSporty: true }}, { upsert: true }) # 在過濾器無匹配時選擇插入文檔 (包含更新字段與唯一索引字段)(運算符以不存在處理)(預設為 false)
 $ db.sports.updateMany({}, { $set: { title: "Football", requireTeam: true }}, { upsert: true }) # 同上 (同樣適用於 updateMany，在無匹配時插入一個新文檔)
