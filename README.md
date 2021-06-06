@@ -470,13 +470,24 @@ $ db.sales.find({ $expr: { $gt: [{ $cond: { if: { $gte: ["$volume", 190]}, then:
 ```shell
 $ db.users.find({ hobbies: { $size: 2 }}) # 匹配陣列為指定長度 (無法處理大於或小於)
 $ db.movies.find({ genre: { $all: ["action", "thriller"] }}) # 匹配陣列 (只在乎內容須都被包含)
-$ db.users.find({ hobbies: { $elemMatch: { title: "Sports", frequency: { $gte: 6 }}}}) # 匹配同一項目的內容 (避免判斷到不同對象，參考下方)
+$ db.users.find({ hobbies: { $elemMatch: { title: "Sports", frequency: { $gte: 6 }}}}) # 匹配同一項目的內容 (避免判斷到不同對象，參考下方)(至少一個項目匹配所有條件)
 
 --- Exception
 
 $ db.users.find({ $and: [{ "hobbies.title": "Sports" }, { "hobbies.frequency": { $gte: 3 }}] }) # 判斷到不同對象
 $ db.inventory.find({ dim_cm: { $gt: 15, $lt: 20 }}) # 各條件遍歷判斷 ([~] > 15 && [~] < 20)
 $ db.inventory.find({ dim_cm: { $elemMatch: { $gt: 15, $lt: 20 }}}) # 所有條件遍歷判斷 ([1] > 15 && [1] < 20)
+
+--- Trap
+
+$ db.sports.find({ "colors.color": { $eq: "black" }}) # 單查詢條件 (數組項目至少匹配一個，black 至少包含一個在文檔數組)
+$ db.sports.find({ colors: { $elemMatch: { color: "black" }}}) # 同上 (這邊 $elemMatch 可省略，結果相同)
+$ db.sports.find({ "nums": { $nin: [265, 285] }}) # 同上 (多個條件)
+
+$ db.sports.find({ "colors.color": { $ne: "black" }}) # 單查詢條件 (數組項目全部沒有匹配，black 不包含在任何文檔數組)
+$ db.sports.find({ "colors": { $elemMatch: { color: { $ne: "black" }}}}) # 與上方不同，數組項目至少匹配失敗一個 (非 black 至少包含一個在文檔數組)
+$ db.sports.find({ nums: { $elemMatch: { $nin: [55, 195] }}}) # 同上 (多個條件)
+
 ```
 
 ### 游標方法
@@ -561,7 +572,7 @@ $ db.users.updateOne({ name: "Manuel" }, { $inc: { age: 1, qty: -2 }}) # 根據�
 $ db.users.updateOne({ name: "Chris" }, { $min: { age: 33 }}) # 根據頂級字段變小其值 (僅當指定值小於現有字段值才更新其值)(不存在即創建)
 $ db.users.updateOne({ name: "Chris" }, { $max: { age: 33, phone: 49884840 }}) # 根據頂級字段變大其值 (僅當指定值大於現有字段值才更新其值)(不存在即創建)
 $ db.users.updateOne({ name: "Chris" }, { $mul: { age: 0.5 }}) # 根據頂級字段相乘其值 (將字段值相乘指定值)(不存在即創建，值為 0 並與乘數相同的數字型態)
-$ db.users.updateMany({}, { $rename: { age: "totalAge" }}) # 根據頂級字段重命名名稱 (新名稱必須與現有名稱不同，否則報錯)(不存在不做更動)
+$ db.users.updateMany({}, { $rename: { age: "totalAge" }}) # 根據頂級字段重命名名稱 (新名稱必須與現有名稱不同，否則報錯)(文檔數組不起作用)(不存在不做更動)
 
 ---
 
@@ -570,11 +581,15 @@ $ db.users.updateOne({ name: "Manuel" }, { $rename: { "oauth.github": "oauth.goo
 
 --- array
 
-$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 2 }}}}, { $set: { name: "Sharon", "colors.$.v": 1, "colors.$.color": "pink" }}) # 使用 $ 充當數組匹配到的第一個項目
-$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$": { color: "blue", v: 2 } }}) # 同上
-$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$": { color: "blue", v: 2, a: 1 } }}) # 同上 (新增字段)
+$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 2 }}}}, { $set: { name: "Sharon", "colors.$.v": 1, "colors.$.color": "pink" }}) # 使用 $ 充當查詢匹配到的數組第一個項目 (查詢必須存在數組)
+$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$": { color: "blue", v: 2, a: 1 } }}) # 同上 (覆蓋項目)
 $ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$.a": 1 }}) # 同上 (新增字段)
 $ db.sports.updateMany({ nums: { $elemMatch: { $gte: 6 }}}, { $set: { "nums.$": 100, isVerify: true }}) # 同上 (同樣適用於 updateMany)
+
+$ db.sports.updateMany({}, { $inc: { "colors.$[].v": 1, "colors.$[].a": -3 }}) # 使用 $[] 充當查詢匹配到的所有數組項目
+$ db.sports.updateMany({ "colors.color": "black" }, { $inc: { "colors.$[].v": -2 }}) # 同上
+$ db.sports.updateMany({ nums: { $elemMatch: { $gte: 255, $lte: 275 }}}, { $inc: { "nums.$[]": 5, isVerify: true }}) # 同上 (新增字段)
+$ db.sports.updateMany({}, { $unset: { "colors.$[].a": "", count: "", isVerify: "" }}) # 同上 (消除數組文檔字段)
 
 --- upsert (Parameters)
 
