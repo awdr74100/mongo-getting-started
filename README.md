@@ -552,7 +552,7 @@ $ db.users.find({},{ array: { $elemMatch: { $eq: "red" }}}) # 同上 (元素可�
 $ db.users.find({},{ array: { $elemMatch: { $in: ["pink", "red"] }}}) # 同上 (元素可能不同)
 $ db.equipment.find({}, { logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983") }}}) # 嵌套
 $ db.equipment.find({}, { name: 1, logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983"), startAt: { $gte: ISODate("2021-05-21T07:57:00.046Z") }}}}) # 嵌套
-$ db.sports.find({}, { nums: { $elemMatch: { $gte: 290 } }, colors: { $elemMatch: { color: "blue" }}})
+$ db.sports.find({}, { nums: { $elemMatch: { $gte: 290 } }, colors: { $elemMatch: { color: "blue" }}}) # 多個字段使用
 $ db.sports.find({ nums: { $elemMatch: { $gte: 290 }} },{ "nums.$": 1, colors: { $elemMatch: { color: "blue" }} }) # 錯誤 (無法與 $ 共同使用)
 
 ---
