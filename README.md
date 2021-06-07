@@ -482,11 +482,12 @@ $ db.inventory.find({ dim_cm: { $elemMatch: { $gt: 15, $lt: 20 }}}) # 所有條�
 
 $ db.sports.find({ "colors.color": { $eq: "black" }}) # 單查詢條件 (數組項目至少匹配一個，black 至少包含一個在文檔數組)
 $ db.sports.find({ colors: { $elemMatch: { color: "black" }}}) # 同上 (這邊 $elemMatch 可省略，結果相同)
-$ db.sports.find({ "nums": { $nin: [265, 285] }}) # 同上 (多個條件)
 
 $ db.sports.find({ "colors.color": { $ne: "black" }}) # 單查詢條件 (數組項目全部沒有匹配，black 不包含在任何文檔數組)
-$ db.sports.find({ "colors": { $elemMatch: { color: { $ne: "black" }}}}) # 與上方不同，數組項目至少匹配失敗一個 (非 black 至少包含一個在文檔數組)
-$ db.sports.find({ nums: { $elemMatch: { $nin: [55, 195] }}}) # 同上 (多個條件)
+$ db.sports.find({ colors: { $elemMatch: { color: { $ne: "black" }}}}) # 與上方不同，數組項目至少匹配失敗一個 (非 black 至少包含一個在文檔數組)
+
+$ db.sports.find({ nums: { $nin: [55, 195] }}) # 如同多個未使用 $elemMatch 的 $ne 查詢 (55 或 195 不包含在任何文檔數組)
+$ db.sports.find({ nums: { $elemMatch: { $nin: [55, 195] }}}) # 如同多個使用 $elemMatch 的 $ne 查詢 (非 55 或 195 至少包含一個在文檔數組)
 
 ```
 
@@ -538,18 +539,21 @@ $ db.equipment.find({}, { name: 0, _id: 1 }) # 包含與排除無法共用，_id
 ### 投影運算符
 
 ```shell
-$ db.users.find({ array: "red" }, { "array.$": 1 }) # 投影數組中與查詢匹配的第一個元素 (查詢必須存在數組，無論自身或其他，返回空例外)
+$ db.users.find({ array: "red" }, { "array.$": 1 }) # 投影數組中與查詢匹配的第一個元素 (查詢必須存在數組，無論自身或其他，返回空例外)(單個文檔只有一個字段能使用)(無法與 $ 共同使用)
 $ db.users.find({ array: { $all: ["red", "black"] }}, { "array.$": 1 }) # 同上 (元素可能不同)
 $ db.users.find({ array: { $in: ["pink", "red"] }}, { "array.$": 1 }) # 同上 (元素可能不同)
 $ db.equipment.find({ "logs.member": ObjectId("60a54ff1617882583771b983") }, { "logs.$": 1 }) # 嵌套
+$ db.sports.find({ nums: { $in: [75, 100] } , "colors.color": "blue" }, { "nums.$": 1, "colors.$": 1 }) # 錯誤 (單個文檔只有一個字段能使用)
 
 ---
 
-$ db.users.find({},{ array: { $elemMatch: {}}}) # 投影數組中與指定 $elemMatch 條件匹配的第一個元素 (此為皆不匹配)
+$ db.users.find({},{ array: { $elemMatch: {}}}) # 投影數組中與指定 $elemMatch 條件匹配的第一個元素 (假設為數組，此為不匹配；假設為文檔數組，此為匹配數組第一個元素)(單個文檔多個字段能使用)(無法與 $ 共同使用)
 $ db.users.find({},{ array: { $elemMatch: { $eq: "red" }}}) # 同上 (元素可能不同)
 $ db.users.find({},{ array: { $elemMatch: { $in: ["pink", "red"] }}}) # 同上 (元素可能不同)
 $ db.equipment.find({}, { logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983") }}}) # 嵌套
 $ db.equipment.find({}, { name: 1, logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983"), startAt: { $gte: ISODate("2021-05-21T07:57:00.046Z") }}}}) # 嵌套
+$ db.sports.find({}, { nums: { $elemMatch: { $gte: 290 } }, colors: { $elemMatch: { color: "blue" }}})
+$ db.sports.find({ nums: { $elemMatch: { $gte: 290 }} },{ "nums.$": 1, colors: { $elemMatch: { color: "blue" }} }) # 錯誤 (無法與 $ 共同使用)
 
 ---
 
@@ -588,8 +592,14 @@ $ db.sports.updateMany({ nums: { $elemMatch: { $gte: 6 }}}, { $set: { "nums.$": 
 
 $ db.sports.updateMany({}, { $inc: { "colors.$[].v": 1, "colors.$[].a": -3 }}) # 使用 $[] 充當查詢匹配到的所有數組項目
 $ db.sports.updateMany({ "colors.color": "black" }, { $inc: { "colors.$[].v": -2 }}) # 同上
-$ db.sports.updateMany({ nums: { $elemMatch: { $gte: 255, $lte: 275 }}}, { $inc: { "nums.$[]": 5, isVerify: true }}) # 同上 (新增字段)
-$ db.sports.updateMany({}, { $unset: { "colors.$[].a": "", count: "", isVerify: "" }}) # 同上 (消除數組文檔字段)
+$ db.sports.updateMany({ nums: { $elemMatch: { $gte: 255, $lte: 275 }}}, { $inc: { "nums.$[]": 5, limit: 12 }}) # 同上 (新增字段)
+$ db.sports.updateMany({}, { $unset: { "colors.$[].a": "", count: "", limit: "" }}) # 同上 (消除數組文檔字段)
+
+$ db.sports.updateMany({}, { $inc: { "nums.$[el]": 5 }}, { arrayFilters: [{ "el": { $gte: 200 }}] }) # 使用 $[<identifier>] 充當 arrayFilters 匹配到的所有數組項目 (必須準確指定一個 <identifier>)
+$ db.sports.updateMany({ name: { $in: ["Sharon", "Ian"] }}, { $set: { "colors.$[item].verify": true }}, { arrayFilters: [{ "item.v": { $gte: 4 }}] }) # 同上 (操作文檔數組)
+$ db.sports.updateMany({}, { $set: { "colors.$[el].verify": true }}, { arrayFilters: [{ "el.color": { $in: ["blue", "red"] }, "el.v": { $ne: 0 }}] }) # 指定複合條件 (<identifier> 只能存在於一個過濾器文檔)
+$ db.students3.updateMany({}, { $inc: { "grades.$[el1].questions.$[]": 100 }}, { arrayFilters: [{ "el1.type": { $in: ["quiz", "exam"] }}] }) # 與 $[] 結合使用
+$ db.students3.updateMany({}, { $inc: { "grades.$[el1].questions.$[el2]": 100 }}, { arrayFilters: [{ "el1.type": "quiz" }, { "el2": { $gte: 9 }}] }) # 指定多個 <identifier>
 
 --- upsert (Parameters)
 
