@@ -416,13 +416,13 @@ $ mongoimport --file .\users.json --db shop --collection users --jsonArray --dro
 
 ```shell
 $ db.movies.find({ runtime: { $eq: 60 }}) # 匹配等於指定值的值
-$ db.movies.find({ runtime: { $ne: 60 }}) # 匹配不等於指定值的值
+$ db.movies.find({ runtime: { $ne: 60 }}) # 匹配不等於指定值的值 (注意查詢數組的變化)
 $ db.movies.find({ runtime: { $lt: 42 }}) # 匹配小於指定值的值
 $ db.movies.find({ runtime: { $lte: 42 }}) # 匹配小於等於指定值的值
 $ db.movies.find({ runtime: { $gt: 42 }}) # 匹配大於指定值的值
 $ db.movies.find({ runtime: { $gte: 42 }}) # 匹配大於等於指定值的值
 $ db.movies.find({ runtime: { $in: [30, 42] }}) # 匹配數組指定的任何值 (其次使用 $or)
-$ db.movies.find({ runtime: { $nin: [30, 42] }}) # 不匹配數組指定的任何值 (其次使用 $or)
+$ db.movies.find({ runtime: { $nin: [30, 42] }}) # 不匹配數組指定的任何值 (其次使用 $or)(注意查詢數組的變化)
 
 --- Array
 
@@ -480,14 +480,16 @@ $ db.inventory.find({ dim_cm: { $elemMatch: { $gt: 15, $lt: 20 }}}) # 所有條�
 
 --- Trap
 
-$ db.sports.find({ "colors.color": { $eq: "black" }}) # 單查詢條件 (數組項目至少匹配一個，black 至少包含一個在文檔數組)
-$ db.sports.find({ colors: { $elemMatch: { color: "black" }}}) # 同上 (這邊 $elemMatch 可省略，結果相同)
+$ db.sports.find({ "colors.color": { $eq: "red" }}) # 單條件查詢 (數組任意值或文檔匹配即返回)
+$ db.sports.find({ "colors.color": { $in: ["red", "pink"] }}) # 同上 (多個數值)
+$ db.sports.find({ "colors.color": { $not: { $nin: ["red", "pink"] }}}) # 同上
 
-$ db.sports.find({ "colors.color": { $ne: "black" }}) # 單查詢條件 (數組項目全部沒有匹配，black 不包含在任何文檔數組)
-$ db.sports.find({ colors: { $elemMatch: { color: { $ne: "black" }}}}) # 與上方不同，數組項目至少匹配失敗一個 (非 black 至少包含一個在文檔數組)
+$ db.sports.find({ "colors.color": { $ne: "red" }}) # 單條件查詢 (數組任意值或文檔匹配即不返回 -> 數組全部值或文檔皆不匹配即返回)
+$ db.sports.find({ "colors.color": { $nin: ["red", "pink"] }}) # 同上 (多個數值)
+$ db.sports.find({ "colors.color": { $not: { $in: ["red", "pink"] }}}) # 同上
 
-$ db.sports.find({ nums: { $nin: [55, 195] }}) # 如同多個未使用 $elemMatch 的 $ne 查詢 (55 或 195 不包含在任何文檔數組)
-$ db.sports.find({ nums: { $elemMatch: { $nin: [55, 195] }}}) # 如同多個使用 $elemMatch 的 $ne 查詢 (非 55 或 195 至少包含一個在文檔數組)
+$ db.sports.find({ "colors": { $elemMatch: { color: { $eq: "red" }}}}) # 與未使用 $elemMatch 相同 (限單條件查詢且未使用 $ne、$nin、$not)
+$ db.sports.find({ "colors": { $elemMatch: { color: { $ne: "red" }}}}) # 與未使用 $elemMatch 不同 (數組任意值或文檔不匹配即返回)
 
 ```
 
