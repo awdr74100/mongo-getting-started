@@ -506,7 +506,7 @@ $ db.movies.find().toArray() # 返回數組化結果 (全部文檔)
 $ db.movies.find().next() # 返回下一個文檔
 $ db.movies.find().forEach(doc => printjson(doc)) # 遍歷文檔
 $ db.movies.find().hasNext() # 確認下一個文檔是否存在 (通常用於變數)
-$ db.movies.find().sort({ "rating.average": -1, runtime: -1 }) # 返回排序後的文檔 (1 代表升序，-1 代表降序)
+$ db.movies.find().sort({ "rating.average": -1, runtime: -1 }) # 返回排序後的文檔 (1 代表升序，-1 代表降序)(注意字段為數組時判斷，升序選擇項目間最小值、降序選擇項目間最大值，可嵌套選擇項目判斷字段)
 $ db.movies.find().skip(2) # 返回跳過文檔數量後結果 (0 等同於沒有設置)
 $ db.movies.find().limit(2) # 返回限制文檔數量後結果 (0 等效於沒有設置)
 $ db.movies.find().batchSize(200) # 設置每批響應要返回的文檔數 (注意超時，可從 Wireshark 確認)
@@ -602,6 +602,13 @@ $ db.sports.updateMany({ name: { $in: ["Sharon", "Ian"] }}, { $set: { "colors.$[
 $ db.sports.updateMany({}, { $set: { "colors.$[el].verify": true }}, { arrayFilters: [{ "el.color": { $in: ["blue", "red"] }, "el.v": { $ne: 0 }}] }) # 指定複合條件 (<identifier> 只能存在於一個過濾器文檔)
 $ db.students3.updateMany({}, { $inc: { "grades.$[el1].questions.$[]": 100 }}, { arrayFilters: [{ "el1.type": { $in: ["quiz", "exam"] }}] }) # 與 $[] 結合使用
 $ db.students3.updateMany({}, { $inc: { "grades.$[el1].questions.$[el2]": 100 }}, { arrayFilters: [{ "el1.type": "quiz" }, { "el2": { $gte: 9 }}] }) # 指定多個 <identifier>
+
+$ db.sports.updateMany({}, { $push: { nums: 2 }}) # 將值附加到數組
+$ db.sports.updateMany({}, { $push: { colors: [2] } }) # 將數組附加到數組
+$ db.sports.updateMany({}, { $push: { colors: { color: "green", v: 0 }}}) # 將文檔附加到數組
+$ db.sports.updateMany({}, { $push: { colors: { $each: [{ color: "brown", v: 2 }] }}}) # 使用 $each 添加多個對象
+$ db.sports.updateMany({}, { $push: { colors: { $each: [{ color: "gold", v: -10 }], $sort: { v: 1 }}}}) # 使用 $sort 升降排序 (必須與 $each 搭配使用，可設為 [])(1 表示升序、-1 表示降序)(陣列原始項目一併處理)
+$ db.sports.updateMany({}, { $push: { colors: { $each: [{ color: "cyan", v: 4 }], $sort: { v: -1 }, $slice: 3 }}}) # 使用 $slice 切片 (必須與 $each 搭配使用，可設為 [])(0 表示清空數組、正數表示從開頭計算、負數表示從結尾計算)(陣列原始項目一併處理)
 
 --- upsert (Parameters)
 
