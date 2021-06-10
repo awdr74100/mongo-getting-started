@@ -210,16 +210,25 @@ $ db.users.findOne({ name: "Ian" }).oauth.google.kind[0]
 
 ---
 
-$ db.users.find({ "oauth.google.kind": ["aaa", "bbb"] }).pretty() # 匹配陣列 (完全符合陣列)
-$ db.users.find({ "oauth.google.kind": { $all: ["bbb", "aaa"] }}).pretty() # 匹配陣列 (只在乎內容須都被包含)
-$ db.users.find({ "oauth.google.kind": "ccc" }).pretty() # 匹配項目 (至少匹配一個項目)
+$ db.users.find({ "oauth.google.kind.0": "aaa" })
+$ db.users.find({ "oauth.google.kind.0": { $gte: 30 }})
+$ db.users.find({ "oauth.google.kind": { $gte: 30 }}) # 匹配項目 (至少匹配一個項目)
+$ db.users.find({ "hobbies.frequency": { $lte: 4 }}) # 物件陣列存取方式
 
 ---
 
-$ db.users.find({ "oauth.google.kind.0": "aaa" }).pretty()
-$ db.users.find({ "oauth.google.kind.0": { $gte: 30 }}).pretty()
-$ db.users.find({ "oauth.google.kind": { $gte: 30 }}).pretty() # 匹配項目 (至少匹配一個項目)
-$ db.users.find({ "hobbies.frequency": { $lte: 4 }}) # 物件陣列存取方式
+$ db.sports.find({ nums: [73, 85, 290] }) # 完全匹配陣列 (值、順序、長度)
+$ db.sports.find({ nums: { $all: [73, 85] }}) # 部分匹配陣列 (值)
+$ db.sports.find({ nums: { $eq: 370 }}) # 單條件查詢 (至少匹配一個項目)
+$ db.sports.find({ nums: { $gte: 100, $lte: 130 }}) # 多條件查詢 (可能不同項目)
+$ db.sports.find({ nums: { $elemMatch: { $gte: 100, $lte: 130 }}}) # 多條件查詢 (同一項目)
+$ db.sports.find({ "nums.0": { $gte: 110 }}) # 指定索引查詢
+
+$ db.sports.find({ colors: { color: "blue", v: 30 } }) # 完全匹配文檔陣列 (值、順序、長度)
+$ db.sports.find({ "colors.v": { $eq: 30 } }) # 單條件查詢 (至少匹配一個項目)
+$ db.sports.find({ "colors.v": { $gte: 25, $lte: 30 } }) # 多條件查詢 (可能不同項目)
+$ db.sports.find({ colors: { $elemMatch: { v: { $gte: 25, $lte: 30 }}}}) # 多條件查詢 (同一項目)
+$ db.sports.find({ "colors.0.v": { $lte: 5 }}) # 指定索引查詢
 ```
 
 ### 關聯查詢
@@ -609,6 +618,13 @@ $ db.sports.updateMany({}, { $push: { colors: { color: "green", v: 0 }}}) # 將�
 $ db.sports.updateMany({}, { $push: { colors: { $each: [{ color: "brown", v: 2 }] }}}) # 使用 $each 添加多個對象
 $ db.sports.updateMany({}, { $push: { colors: { $each: [{ color: "gold", v: -10 }], $sort: { v: 1 }}}}) # 使用 $sort 升降排序 (必須與 $each 搭配使用，可設為 [])(1 表示升序、-1 表示降序)(陣列原始項目一併處理)
 $ db.sports.updateMany({}, { $push: { colors: { $each: [{ color: "cyan", v: 4 }], $sort: { v: -1 }, $slice: 3 }}}) # 使用 $slice 切片 (必須與 $each 搭配使用，可設為 [])(0 表示清空數組、正數表示從開頭計算、負數表示從結尾計算)(陣列原始項目一併處理)
+$ db.sports.updateMany({}, { $push: { colors: { $each: [{ color: "orange", v: 6 }], $position: 0 }}}) # 使用 $position 指定位置 (必須與 $each 搭配使用，可設為 [])(正數表示從開頭計算、負數表示從結尾計算，各自極限為結尾及開頭)(注意負數不含最後尾數計算)
+
+$ db.sports.updateMany({}, { $pull: { nums: { $gte: 100, $lte: 200 }}}) # 從數組刪除所有匹配項目 (頂級文檔不需要使用 $elemMatch)
+$ db.sports.updateMany({}, { $pull: { colors: { color: { $nin: ["red"] } ,v: { $gte: 10, $lte: 20 } }}}) # 從文檔數組刪除所有匹配項目 (頂級文檔不需要使用 $elemMatch)
+
+$ db.sports.updateMany({}, { $pop: { nums: 1 }}) # 刪除數組最後一個項目 (空數組不會被修改)
+$ db.sports.updateMany({}, { $pop: { colors: -1 }}) # 刪除數組第一個項目 (空數組不會被修改)
 
 --- upsert (Parameters)
 
