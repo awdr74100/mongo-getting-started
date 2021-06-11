@@ -500,6 +500,8 @@ $ db.sports.find({ "colors.color": { $not: { $in: ["red", "pink"] }}}) # 同上
 $ db.sports.find({ "colors": { $elemMatch: { color: { $eq: "red" }}}}) # 與未使用 $elemMatch 相同 (限單條件查詢且未使用 $ne、$nin、$not)
 $ db.sports.find({ "colors": { $elemMatch: { color: { $ne: "red" }}}}) # 與未使用 $elemMatch 不同 (數組任意值或文檔不匹配即返回)
 
+$ db.test.find({ user_id: 1, imgs: { $elemMatch: { img_id: 1, "matches.img_id": { $nin: [3] }}}}) # 未使用 $elemMatch 處理 (結果不同，參考上方)
+$ db.test.find({ user_id: 1, imgs: { $elemMatch: { img_id: 1, matches: { $elemMatch: { img_id: { $nin: [3] } }}}}}) # 使用 $elemMatch 處理 (結果不同，參考上方)
 ```
 
 ### 游標方法
@@ -596,24 +598,24 @@ $ db.users.updateOne({ name: "Manuel" }, { $rename: { "oauth.github": "oauth.goo
 
 --- array
 
-$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 2 }}}}, { $set: { name: "Sharon", "colors.$.v": 1, "colors.$.color": "pink" }}) # 使用 $ 充當查詢匹配到的數組第一個項目 (查詢必須存在數組)
+$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 2 }}}}, { $set: { name: "Sharon", "colors.$.v": 1, "colors.$.color": "pink" }}) # 使用 $ 充當查詢匹配到的數組第一個項目 (查詢必須存在數組)(不可用於嵌套數組)
 $ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$": { color: "blue", v: 2, a: 1 } }}) # 同上 (覆蓋項目)
 $ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$.a": 1 }}) # 同上 (新增字段)
 $ db.sports.updateMany({ nums: { $elemMatch: { $gte: 6 }}}, { $set: { "nums.$": 100, isVerify: true }}) # 同上 (同樣適用於 updateMany)
 
-$ db.sports.updateMany({}, { $inc: { "colors.$[].v": 1, "colors.$[].a": -3 }}) # 使用 $[] 充當查詢匹配到的所有數組項目
+$ db.sports.updateMany({}, { $inc: { "colors.$[].v": 1, "colors.$[].a": -3 }}) # 使用 $[] 充當查詢匹配到的所有數組項目 (可用於嵌套數組)
 $ db.sports.updateMany({ "colors.color": "black" }, { $inc: { "colors.$[].v": -2 }}) # 同上
 $ db.sports.updateMany({ nums: { $elemMatch: { $gte: 255, $lte: 275 }}}, { $inc: { "nums.$[]": 5, limit: 12 }}) # 同上 (新增字段)
 $ db.sports.updateMany({}, { $unset: { "colors.$[].a": "", count: "", limit: "" }}) # 同上 (消除數組文檔字段)
 
-$ db.sports.updateMany({}, { $inc: { "nums.$[el]": 5 }}, { arrayFilters: [{ "el": { $gte: 200 }}] }) # 使用 $[<identifier>] 充當 arrayFilters 匹配到的所有數組項目 (必須準確指定一個 <identifier>)
+$ db.sports.updateMany({}, { $inc: { "nums.$[el]": 5 }}, { arrayFilters: [{ "el": { $gte: 200 }}] }) # 使用 $[<identifier>] 充當 arrayFilters 匹配到的所有數組項目 (必須準確指定一個 <identifier>)(可用於嵌套數組)
 $ db.sports.updateMany({ name: { $in: ["Sharon", "Ian"] }}, { $set: { "colors.$[item].verify": true }}, { arrayFilters: [{ "item.v": { $gte: 4 }}] }) # 同上 (操作文檔數組)
 $ db.sports.updateMany({}, { $set: { "colors.$[el].verify": true }}, { arrayFilters: [{ "el.color": { $in: ["blue", "red"] }, "el.v": { $ne: 0 }}] }) # 指定複合條件 (<identifier> 只能存在於一個過濾器文檔)
 $ db.students3.updateMany({}, { $inc: { "grades.$[el1].questions.$[]": 100 }}, { arrayFilters: [{ "el1.type": { $in: ["quiz", "exam"] }}] }) # 與 $[] 結合使用
 $ db.students3.updateMany({}, { $inc: { "grades.$[el1].questions.$[el2]": 100 }}, { arrayFilters: [{ "el1.type": "quiz" }, { "el2": { $gte: 9 }}] }) # 指定多個 <identifier>
 
-$ db.sports.updateMany({}, { $push: { nums: 2 }}) # 將值附加到數組
-$ db.sports.updateMany({}, { $push: { colors: [2] } }) # 將數組附加到數組
+$ db.sports.updateMany({}, { $push: { nums: 2 }}) # 將值附加到數組 (字段非數組將報錯)(字段不存在將新增已套用修飾符並賦值的數組)
+$ db.sports.updateMany({}, { $push: { nums: [2] } }) # 將數組附加到數組
 $ db.sports.updateMany({}, { $push: { colors: { color: "green", v: 0 }}}) # 將文檔附加到數組
 $ db.sports.updateMany({}, { $push: { colors: { $each: [{ color: "brown", v: 2 }] }}}) # 使用 $each 添加多個對象
 $ db.sports.updateMany({}, { $push: { colors: { $each: [{ color: "gold", v: -10 }], $sort: { v: 1 }}}}) # 使用 $sort 升降排序 (必須與 $each 搭配使用，可設為 [])(1 表示升序、-1 表示降序)(陣列原始項目一併處理)
@@ -625,6 +627,11 @@ $ db.sports.updateMany({}, { $pull: { colors: { color: { $nin: ["red"] } ,v: { $
 
 $ db.sports.updateMany({}, { $pop: { nums: 1 }}) # 刪除數組最後一個項目 (空數組不會被修改)
 $ db.sports.updateMany({}, { $pop: { colors: -1 }}) # 刪除數組第一個項目 (空數組不會被修改)
+
+$ db.sports.updateMany({}, { $addToSet: { nums: 28 }}) # 將值附加到數組 (字段非數組將報錯)(字段不存在將新增已套用修飾符並賦值的數組)(只附加不完全匹配的數組對象)
+$ db.sports.updateMany({}, { $addToSet: { nums: [28] }}) # 將數組附加到數組
+$ db.sports.updateMany({}, { $addToSet: { colors: { color: "teal", v: 6 }}}) # 將文檔附加到數組
+$ db.sports.updateMany({}, { $addToSet: { colors: { $each: [{ color: "yellow", v: 19 }] }}}) # 使用 $each 添加多個對象
 
 --- upsert (Parameters)
 
