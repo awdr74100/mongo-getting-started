@@ -227,6 +227,7 @@ $ db.sports.find({ "nums.0": { $gte: 110 }}) # 指定索引查詢
 $ db.sports.find({ colors: { color: "blue", v: 30 } }) # 完全匹配文檔陣列 (值、順序、長度)
 $ db.sports.find({ "colors.v": { $eq: 30 } }) # 單條件查詢 (至少匹配一個項目)
 $ db.sports.find({ "colors.v": { $gte: 25, $lte: 30 } }) # 多條件查詢 (可能不同項目)
+$ db.sports.find({ "colors.v": { $lte: 30 }, "colors.color": "blue",}) # 多條件查詢 (可能不同項目)
 $ db.sports.find({ colors: { $elemMatch: { v: { $gte: 25, $lte: 30 }}}}) # 多條件查詢 (同一項目)
 $ db.sports.find({ "colors.0.v": { $lte: 5 }}) # 指定索引查詢
 ```
