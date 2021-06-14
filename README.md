@@ -111,7 +111,7 @@ $ db.users.insert([{ name: "Ian", age: 18 }, { name: "Eric", age: 20 }]) # 不�
 
 ---
 
-$  db.users.insertMany([{ _id: 444, name: "Tidy" }, { _id: 222, name: "Owen" }], { ordered: false })
+$ db.users.insertMany([{ _id: 444, name: "Tidy" }, { _id: 222, name: "Owen" }], { ordered: false }) # 無序插入，失敗後仍會嘗試插入其他文檔 (預設為有序，失敗後終止插入後續文檔)
 ```
 
 ### 指定 Collection 讀取 Document
@@ -383,12 +383,35 @@ $ db.posts.insertOne({
 
 ### Write Concern
 
+WiredTiger 使用 checkpoints (即將內存數據寫入磁盤) 來提供磁盤上數據的一致視圖，並允許 MongoDB 從上一個 checkpoint 進行恢復，但如果 MongoDB 在 checkpoint 之間意外退出，則需要使用日誌 ( 64 位系統下，預設已啟用) 來恢復上次 checkpoint 之後所發生的操作。客戶端發起的每個寫入操作都會在內存創建日誌。
+
+- w：請求確認寫入操作已傳達到指定數量的 mongod 實例
+
+  - 0：請求不確認，表示在發出寫入操作後立即返回
+  - 1 (default)：請求確認，表示在發出寫入操作並實際寫入內存後返回，後續透過 `storage.syncPeriodSecs` 所設置間隔時間通過 `fsync` 將數據寫入磁盤
+
+- j：請求確認寫入操作已寫入磁盤日誌
+
+  - undefined (default)：當 `{ w: 1 }` 時，此值將設為 `false`
+  - false：請求不確認，表示依照 `storage.journal.commitIntervalMs` 所設置間隔時間將內存日誌同步到磁盤
+  - true：請求確認，表示將內存日誌主動同步到磁盤後返回
+
+- wtimeout：指定寫入操作在限制時間內返回
+
+  - undefined (default)：沒有限制
+  - \<num>：限制在 \<num> ms 內返回，否則報錯
+
+提示 (1)：日誌在不主動設置 `{ j: true }` 情況下，將根據 `storage.journal.commitIntervalMs` (預設 100 ms) 定期將內存日誌同步到磁盤。
+
+提示 (2)：WiredTiger 在進行寫入操作時，實際上是將數據寫到內存上，接著透過 `storage.syncPeriodSecs` (預設 60 s) 定期通過 `fsync` 寫入到磁盤。
+
+提示 (3)：為了保證資料持久性，建議一定要開啟日誌，這樣即使出現意外退出，也能從最近一次的 checkpoint 及日誌來恢復操作 (可使用 `{ j: true }` 將內存日誌立即同步)
+
 ```shell
 $ db.users.insertOne({ name: "Ian" }, { writeConcern: { w: 0 }})
-$ db.users.insertOne({ name: "Eric" }, { writeConcern: { w: 1 }}) # default
-$ db.users.insertOne({ name: "Jack" }, { writeConcern: { w: 1, j: false }}) # default
-$ db.users.insertOne({ name: "Michael" }, { writeConcern: { w: 1, j: true }})
-$ db.users.insertOne({ name: "Rebecca" }, { writeConcern: { w: 1, j: true, wtimeout: 200 }})
+$ db.users.insertOne({ name: "Ian" }, { writeConcern: { w: 1 }})
+$ db.users.insertOne({ name: "Ian" }, { writeConcern: { w: 1, j: true }})
+$ db.users.insertOne({ name: "Ian" }, { writeConcern: { w: 1, j: true, wtimeout: 2000 }})
 ```
 
 ### 匯入資料
@@ -553,21 +576,22 @@ $ db.equipment.find({}, { name: 0, _id: 1 }) # 包含與排除無法共用，_id
 ### 投影運算符
 
 ```shell
-$ db.users.find({ array: "red" }, { "array.$": 1 }) # 投影數組中與查詢匹配的第一個元素 (查詢必須存在數組，無論自身或其他，返回空例外)(單個文檔只有一個字段能使用)(無法與 $ 共同使用)
+$ db.users.find({ array: "red" }, { "array.$": 1 }) # 投影數組中與查詢匹配的第一個元素 (查詢必須存在數組，無論自身或其他，返回空例外)(每個查詢無法指定多個 $)(無法與 $elemMatch 同時使用)
 $ db.users.find({ array: { $all: ["red", "black"] }}, { "array.$": 1 }) # 同上 (元素可能不同)
 $ db.users.find({ array: { $in: ["pink", "red"] }}, { "array.$": 1 }) # 同上 (元素可能不同)
-$ db.equipment.find({ "logs.member": ObjectId("60a54ff1617882583771b983") }, { "logs.$": 1 }) # 嵌套
-$ db.sports.find({ nums: { $in: [75, 100] } , "colors.color": "blue" }, { "nums.$": 1, "colors.$": 1 }) # 錯誤 (單個文檔只有一個字段能使用)
+$ db.sports.find({ "colors.color": "red" }, { "colors.$": 1 }) # 嵌套
+$ db.sports.find({ "colors.color": "red" }, { "colors.color.$": 1 }) # 嵌套 (指定字段)
+$ db.sports.find({ nums: { $in: [24, 28] }, "colors.color": "blue" }, { "nums.$": 1, "colors.$": 1 }) # 錯誤 (每個查詢無法指定多個 $)
 
 ---
 
-$ db.users.find({},{ array: { $elemMatch: {}}}) # 投影數組中與指定 $elemMatch 條件匹配的第一個元素 (假設為數組，此為不匹配；假設為文檔數組，此為匹配數組第一個元素)(單個文檔多個字段能使用)(無法與 $ 共同使用)
+$ db.users.find({},{ array: { $elemMatch: {}}}) # 投影數組中與指定 $elemMatch 條件匹配的第一個元素 (假設為數組，此為不匹配；假設為文檔數組，此為匹配數組第一個元素)(單個文檔多個字段能使用)(無法與 $ 同時使用)
 $ db.users.find({},{ array: { $elemMatch: { $eq: "red" }}}) # 同上 (元素可能不同)
 $ db.users.find({},{ array: { $elemMatch: { $in: ["pink", "red"] }}}) # 同上 (元素可能不同)
 $ db.equipment.find({}, { logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983") }}}) # 嵌套
 $ db.equipment.find({}, { name: 1, logs: { $elemMatch: { member: ObjectId("60a54ff1617882583771b983"), startAt: { $gte: ISODate("2021-05-21T07:57:00.046Z") }}}}) # 嵌套
 $ db.sports.find({}, { nums: { $elemMatch: { $gte: 290 } }, colors: { $elemMatch: { color: "blue" }}}) # 多個字段使用
-$ db.sports.find({ nums: { $elemMatch: { $gte: 290 }} },{ "nums.$": 1, colors: { $elemMatch: { color: "blue" }} }) # 錯誤 (無法與 $ 共同使用)
+$ db.sports.find({ nums: { $in: [24, 28] }}, { "nums.$": 1, colors: { $elemMatch: { color: "blue" }}}) # 錯誤 (無法與 $ 同時使用)
 
 ---
 
@@ -599,17 +623,17 @@ $ db.users.updateOne({ name: "Manuel" }, { $rename: { "oauth.github": "oauth.goo
 
 --- array
 
-$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 2 }}}}, { $set: { name: "Sharon", "colors.$.v": 1, "colors.$.color": "pink" }}) # 使用 $ 充當查詢匹配到的數組第一個項目 (查詢必須存在數組)(不可用於嵌套數組)
+$ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 2 }}}}, { $set: { name: "Sharon", "colors.$.v": 1, "colors.$.color": "pink" }}) # 使用 $ 充當查詢匹配到的數組第一個項目 (查詢必須存在數組)(不可用於嵌套數組，意指數組內的數組)
 $ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$": { color: "blue", v: 2, a: 1 } }}) # 同上 (覆蓋項目)
 $ db.sports.updateOne({ colors: { $elemMatch: { v: { $gte: 1 }}}}, { $set: { "colors.$.a": 1 }}) # 同上 (新增字段)
 $ db.sports.updateMany({ nums: { $elemMatch: { $gte: 6 }}}, { $set: { "nums.$": 100, isVerify: true }}) # 同上 (同樣適用於 updateMany)
 
-$ db.sports.updateMany({}, { $inc: { "colors.$[].v": 1, "colors.$[].a": -3 }}) # 使用 $[] 充當查詢匹配到的所有數組項目 (可用於嵌套數組)
+$ db.sports.updateMany({}, { $inc: { "colors.$[].v": 1, "colors.$[].a": -3 }}) # 使用 $[] 充當查詢匹配到的所有數組項目 (可用於嵌套數組，意指數組內的數組)
 $ db.sports.updateMany({ "colors.color": "black" }, { $inc: { "colors.$[].v": -2 }}) # 同上
 $ db.sports.updateMany({ nums: { $elemMatch: { $gte: 255, $lte: 275 }}}, { $inc: { "nums.$[]": 5, limit: 12 }}) # 同上 (新增字段)
 $ db.sports.updateMany({}, { $unset: { "colors.$[].a": "", count: "", limit: "" }}) # 同上 (消除數組文檔字段)
 
-$ db.sports.updateMany({}, { $inc: { "nums.$[el]": 5 }}, { arrayFilters: [{ "el": { $gte: 200 }}] }) # 使用 $[<identifier>] 充當 arrayFilters 匹配到的所有數組項目 (必須準確指定一個 <identifier>)(可用於嵌套數組)
+$ db.sports.updateMany({}, { $inc: { "nums.$[el]": 5 }}, { arrayFilters: [{ "el": { $gte: 200 }}] }) # 使用 $[<identifier>] 充當 arrayFilters 匹配到的所有數組項目 (必須準確指定一個 <identifier>)(可用於嵌套數組，意指數組內的數組)
 $ db.sports.updateMany({ name: { $in: ["Sharon", "Ian"] }}, { $set: { "colors.$[item].verify": true }}, { arrayFilters: [{ "item.v": { $gte: 4 }}] }) # 同上 (操作文檔數組)
 $ db.sports.updateMany({}, { $set: { "colors.$[el].verify": true }}, { arrayFilters: [{ "el.color": { $in: ["blue", "red"] }, "el.v": { $ne: 0 }}] }) # 指定複合條件 (<identifier> 只能存在於一個過濾器文檔)
 $ db.students3.updateMany({}, { $inc: { "grades.$[el1].questions.$[]": 100 }}, { arrayFilters: [{ "el1.type": { $in: ["quiz", "exam"] }}] }) # 與 $[] 結合使用
@@ -636,7 +660,7 @@ $ db.sports.updateMany({}, { $addToSet: { colors: { $each: [{ color: "yellow", v
 
 --- upsert (Parameters)
 
-$ db.users.updateOne({ name: "Maria", age: 29 }, { $set: { isSporty: true }}, { upsert: true }) # 在過濾器無匹配時選擇插入文檔 (包含更新字段與唯一索引字段)(運算符以不存在處理)(預設為 false)
+$ db.users.updateOne({ name: "Maria", age: 29 }, { $set: { isSporty: true }}, { upsert: true }) # 在過濾器無匹配時選擇插入文檔 (包含更新字段與唯一索引字段)(更新運算符以不存在處理)(預設為 false)
 $ db.sports.updateMany({}, { $set: { title: "Football", requireTeam: true }}, { upsert: true }) # 同上 (同樣適用於 updateMany，在無匹配時插入一個新文檔)
 $ db.sports.updateMany({ v: { $gt: 4 }}, { $set: { title: "Basketball" }}, { upsert: true }) # 同上 (v 不為唯一索引值，故單純插入 title)
 $ db.users.updateOne({ name: "Maria" }, { $set: { name: "Sharon" }}, { upsert: true }) # 同上 (相同字段時，更新字段將覆蓋唯一索引字段)
