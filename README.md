@@ -665,3 +665,21 @@ $ db.sports.updateMany({}, { $set: { title: "Football", requireTeam: true }}, { 
 $ db.sports.updateMany({ v: { $gt: 4 }}, { $set: { title: "Basketball" }}, { upsert: true }) # 同上 (v 不為唯一索引值，故單純插入 title)
 $ db.users.updateOne({ name: "Maria" }, { $set: { name: "Sharon" }}, { upsert: true }) # 同上 (相同字段時，更新字段將覆蓋唯一索引字段)
 ```
+
+---
+
+### 刪除操作
+
+```shell
+$ db.users.deleteOne({ name: "Chris" })
+$ db.users.deleteMany({ totalAge: { $exists: false }, isSporty: true })
+
+---
+
+$ db.users.deleteMany({})
+$ db.users.drop()
+
+---
+
+$ db.dropDatabase()
+```
