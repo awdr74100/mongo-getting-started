@@ -684,3 +684,15 @@ $ db.users.drop()
 
 $ db.dropDatabase()
 ```
+
+---
+
+### 分析查詢
+
+```shell
+$ db.contacts.explain().help() # 查詢可用於分析的方法
+$ db.contacts.explain().find().help() # 查詢可用於分析的查詢修飾符
+$ db.contacts.explain().find({ "dob.age": { $gt: 60 }}) # 預設使用 queryPlanner 模式 (寫入操作實際不修改資料庫)
+$ db.contacts.explain("executionStats").find({ "dob.age": { $gt: 60 }}) # 使用 executionStats 模式 (寫入操作實際不修改資料庫)
+$ db.contacts.explain("allPlansExecution").find({ "dob.age": { $gt: 60 }}) # 使用 allPlansExecution 模式 (寫入操作實際不修改資料庫)
+```
