@@ -696,3 +696,11 @@ $ db.contacts.explain().find({ "dob.age": { $gt: 60 }}) # 預設使用 queryPlan
 $ db.contacts.explain("executionStats").find({ "dob.age": { $gt: 60 }}) # 使用 executionStats 模式 (寫入操作實際不修改資料庫)
 $ db.contacts.explain("allPlansExecution").find({ "dob.age": { $gt: 60 }}) # 使用 allPlansExecution 模式 (寫入操作實際不修改資料庫)
 ```
+
+### 創建索引
+
+```shell
+$ db.contacts.getIndexes() # 取得集合索引
+$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)
+$ db.contacts.dropIndex({ "dob.age": 1 }) # 刪除索引 (可透過索引名稱或文檔將其刪除)
+```
