@@ -718,13 +718,17 @@ db.contacts.find({ x: 20, y: 40 }) # 使用索引前綴 { x: 1, y: 1 } 查詢
 db.contacts.find({ x: 20, y: 40, z: 60 }) # 使用索引 { x: 1, y: 1, z: 1 } 查詢
 db.contacts.find({ x: 20, z: 60 }) # 使用索引前綴 { x: 1 } 查詢
 
-db.contacts.find().sort({ x: 1 }) # 使用索引前綴 { x: 1 } 排序
-db.contacts.find().sort({ x: 1, y: 1 }) # 使用索引前綴 { x: 1, y: 1 } 排序
-db.contacts.find().sort({ x: -1, y: -1, z: -1 }) # 使用索引 { x: 1, y: 1, z: 1 } 排序
-db.contacts.find({ x: 20 }).sort({ y: 1, z: 1 }) # 使用索引 { x: 1, y: 1, z: 1 } 排序 (查詢須為相等條件)
-db.contacts.find({ x: 20 }).sort({ y: 1 }) # 使用索引 { x: 1, y: 1 } 排序 (查詢須為相等條件)
-db.contacts.find({ x: 20, y: 40 }).sort({ z: 1 }) # 使用索引 { x: 1, y: 1, z: 1 } 排序 (查詢須為相等條件)
-db.contacts.find().sort({ x: 1, z: 1 }) # 未使用索引排序 (缺少 y，並非像查詢一樣可自動省略 z)
-db.contacts.find({ y: 40 }).sort({ x: 1, z: 1 }) # 未使用索引排序 (x 應設為查詢，y 設為排序)
-db.contacts.find({ x: 20 }).sort({ z: 1 }) # 未使用索引排序 (缺少 y 相等條件或 y 排序)
+db.contacts.find().sort({ x: 1 }) # 使用索引前綴 { x: 1 } 排序 (存在索引指標，結果與使用索引相同)
+db.contacts.find().sort({ x: 1, y: 1 }) # 使用索引前綴 { x: 1, y: 1 } 排序 (存在索引指標，結果與使用索引相同)
+db.contacts.find().sort({ x: -1, y: -1, z: -1 }) # 使用索引 { x: 1, y: 1, z: 1 } 排序 (反向排序時，索引鍵皆須相反) √
+db.contacts.find({ x: { $gt: 21 }}).sort({ x: 1, y: 1, z: 1 }) # 使用索引 { x: 1, y: 1 } 排序並同時過濾 (存在索引指標，結果與使用索引相同)
+
+db.contacts.find({ x: 20 }) # 固定索引鍵下使用索引前綴 { x: 1 } 排序 (存在索引指標，結果與使用索引相同)(查詢索引鍵須為相等條件)
+db.contacts.find({ x: 20 }).sort({ y: 1 }) # 固定索引鍵下使用索引前綴 { x: 1, y: 1 } 排序 (存在索引指標，結果與使用索引相同)(查詢索引鍵須為相等條件)
+db.contacts.find({ x: 20 }).sort({ y: -1, z: -1 }) # 固定索引鍵下使用索引 { x: 1, y: 1, z: 1 } 排序 (反向排序時，索引鍵皆須相反)(查詢索引鍵須為相等條件) √
+db.contacts.find({ x: 20, y: 40 }).sort({ z: 1 }) # 固定多索引鍵下使用索引 { x: 1, y: 1, z: 1 } 排序 (反向排序時，索引鍵皆須相反)(查詢索引鍵須為相等條件)
+
+db.contacts.find().sort({ x: 1, z: 1 }) # 未使用索引查詢及排序 (排序缺少 y 索引鍵)(並非像查詢一樣可自動省略 z)
+db.contacts.find({ y: 40 }).sort({ x: 1, z: 1 }) # 未使用索引查詢及排序 (x 索引鍵應設為查詢，y 索引鍵應設為排序)
+db.contacts.find({ x: 20 }).sort({ z: 1 }) # 未使用索引排序 (查詢缺少 y 索引鍵或排序缺少 y 索引鍵)
 ```
