@@ -731,4 +731,9 @@ db.contacts.find({ x: 20, y: 40 }).sort({ z: 1 }) # 固定多索引鍵下使用�
 db.contacts.find().sort({ x: 1, z: 1 }) # 未使用索引查詢及排序 (排序缺少 y 索引鍵)(並非像查詢一樣可自動省略 z)
 db.contacts.find({ y: 40 }).sort({ x: 1, z: 1 }) # 未使用索引查詢及排序 (x 索引鍵應設為查詢，y 索引鍵應設為排序)
 db.contacts.find({ x: 20 }).sort({ z: 1 }) # 未使用索引排序 (查詢缺少 y 索引鍵或排序缺少 y 索引鍵)
+
+--- createIndex Options
+
+$ db.contacts.createIndex({ email: 1 }, { unique: true })
+$ db.sports.createIndex({ name: 1 }, { unique: true, name: "SuperKey" }) # unique 判斷對象為全部索引鍵 (代表索引鍵需全部相符才會跳錯)
 ```
