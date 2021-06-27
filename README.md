@@ -736,4 +736,6 @@ db.contacts.find({ x: 20 }).sort({ z: 1 }) # 未使用索引排序 (查詢缺少
 
 $ db.contacts.createIndex({ email: 1 }, { unique: true }) # 將索引設為唯一索引 (判斷對象為全部索引鍵，代表索引鍵需全部相符才會跳錯)
 $ db.contacts.createIndex({ name: 1 }, { name: "SuperIndex" }) # 將索引命名 (方便追蹤，當索引名稱存在重複時會報錯)
+$ db.contacts.createIndex({ "dob.age" }, { partialFilterExpression: { "dob.age": { $gte: 60 }}}) # 將索引設為部分索引 (僅索引滿足過濾器表達式的文檔，過濾器內所有鍵均需存在)(可從索引前綴進行匹配)(注意與 unique 屬性的搭配)
+$ db.contacts.createIndex({ "dob.age" }, { partialFilterExpression: { "dob.age": { $gte: 60 }}}) # 將索引設為部分索引 (僅索引包含且匹配過濾器表達式的文檔)(索引前綴同樣適用部分索引)
 ```
