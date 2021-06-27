@@ -701,7 +701,7 @@ $ db.contacts.explain("allPlansExecution").find({ "dob.age": { $gt: 60 }}) # 使
 
 ```shell
 $ db.contacts.getIndexes() # 取得集合索引
-$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)
+$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)(從 COLLSCAN 改而使用 IXSCAN、FETCH、COUNT_SCAN)(鍵相同時排序必須不同 -> 無法建立僅選項不同的相同索引 -> 無法建立索引名稱相同的不同索引)
 $ db.contacts.dropIndex({ "dob.age": 1 }) # 刪除索引 (可透過索引名稱或文檔將其刪除)
 
 ---
@@ -734,6 +734,6 @@ db.contacts.find({ x: 20 }).sort({ z: 1 }) # 未使用索引排序 (查詢缺少
 
 --- createIndex Options
 
-$ db.contacts.createIndex({ email: 1 }, { unique: true })
-$ db.sports.createIndex({ name: 1 }, { unique: true, name: "SuperKey" }) # unique 判斷對象為全部索引鍵 (代表索引鍵需全部相符才會跳錯)
+$ db.contacts.createIndex({ email: 1 }, { unique: true }) # 將索引設為唯一索引 (判斷對象為全部索引鍵，代表索引鍵需全部相符才會跳錯)
+$ db.contacts.createIndex({ name: 1 }, { name: "SuperIndex" }) # 將索引命名 (方便追蹤，當索引名稱存在重複時會報錯)
 ```
