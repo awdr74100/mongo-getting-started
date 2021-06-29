@@ -457,6 +457,16 @@ $ db.movies.find({ runtime: { $gte: 42 }}) # 匹配大於等於指定值的值
 $ db.movies.find({ runtime: { $in: [30, 42] }}) # 匹配數組指定的任何值 (其次使用 $or)
 $ db.movies.find({ runtime: { $nin: [30, 42] }}) # 不匹配數組指定的任何值 (其次使用 $or)(注意查詢數組的變化)
 
+--- Combine
+
+$ db.movies.find({ runtime: { $gte: 30, $lte: 60 }}) # 等同於 { $and: [{ runtime: { $gte: 30 }}, { runtime: { $lte: 60 }}] }
+
+--- Date Compare
+
+$ db.sessions.find({ createdAt: { $gt: ISODate("2021-06-29T17:22:42.613Z"), $lt: ISODate("2021-06-29T17:39:22.613Z") }}) # (轉換到 ISODate 進行比較，計算可到毫秒)
+$ db.sessions.find({ createdAt: { $gt: new Date("2021-06-29T17:22:42.613Z"), $lt: new Date("2021-06-29T17:39:22.613Z") }}) # 同上
+$ db.sessions.find({ createdAt: { $gt: new Date(1624987362613), $lt: new Date(1624988362613) }}) # 同上
+
 --- Array
 
 $ db.movies.find({ genres: { $in: ["Drama", "Action"] }}) # 匹配數組指定的任何值 (如同 $or，不考慮順序)
@@ -737,4 +747,10 @@ db.contacts.find({ x: 20 }).sort({ z: 1 }) # 未使用索引排序 (查詢缺少
 $ db.contacts.createIndex({ email: 1 }, { unique: true }) # 將索引設為唯一索引 (判斷對象為全部索引鍵，代表索引鍵需全部相符才會跳錯)
 $ db.contacts.createIndex({ name: 1 }, { name: "SuperIndex" }) # 將索引命名 (方便追蹤，當索引名稱存在重複時會報錯)
 $ db.contacts.createIndex({ "dob.age" }, { partialFilterExpression: { "dob.age": { $gte: 60 }}}) # 將索引設為部分索引 (僅索引滿足過濾器表達式的文檔，過濾器內所有鍵均需存在)(可從索引前綴進行匹配)(注意與 unique 屬性的搭配)
+$ db.sessions.createIndex({ createdAt: 1 }, { expireAfterSeconds: 10 }) # 將索引設為 TTL 索引 (一定時間後自動從集合中刪除文檔)(過期閾值為索引字段值加上指定的秒數)(僅支持日期或日期陣列字段)(僅支持單字段索引)(不保證過期文檔會被立即刪除，參考 ttlMonitorSleepSecs 選項)
+
+--- ttlMonitorSleepSecs
+
+$ db.adminCommand({ getParameter:1, ttlMonitorSleepSecs: 1 }) # 查看 ttl 睡眠間隔 (預設為 60 秒)
+$ db.adminCommand({ setParameter:1, ttlMonitorSleepSecs: 60 }) # 修改 ttl 睡眠間隔 (以秒為單位)
 ```
