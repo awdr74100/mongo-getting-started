@@ -227,7 +227,7 @@ $ db.sports.find({ "nums.0": { $gte: 110 }}) # 指定索引查詢
 $ db.sports.find({ colors: { color: "blue", v: 30 } }) # 完全匹配文檔陣列 (值、順序、長度)
 $ db.sports.find({ "colors.v": { $eq: 30 } }) # 單條件查詢 (至少匹配一個項目)
 $ db.sports.find({ "colors.v": { $gte: 25, $lte: 30 } }) # 多條件查詢 (可能不同項目)
-$ db.sports.find({ "colors.v": { $lte: 30 }, "colors.color": "blue",}) # 多條件查詢 (可能不同項目)
+$ db.sports.find({ "colors.v": { $lte: 30 }, "colors.color": "blue" }) # 多條件查詢 (可能不同項目)
 $ db.sports.find({ colors: { $elemMatch: { v: { $gte: 25, $lte: 30 }}}}) # 多條件查詢 (同一項目)
 $ db.sports.find({ "colors.0.v": { $lte: 5 }}) # 指定索引查詢
 ```
@@ -747,7 +747,7 @@ db.contacts.find({ x: 20 }).sort({ z: 1 }) # 未使用索引排序 (查詢缺少
 $ db.contacts.createIndex({ email: 1 }, { unique: true }) # 將索引設為唯一索引 (判斷對象為全部索引鍵，代表索引鍵需全部相符才會跳錯)
 $ db.contacts.createIndex({ name: 1 }, { name: "SuperIndex" }) # 將索引命名 (方便追蹤，當索引名稱存在重複時會報錯)
 $ db.contacts.createIndex({ "dob.age" }, { partialFilterExpression: { "dob.age": { $gte: 60 }}}) # 將索引設為部分索引 (僅索引滿足過濾器表達式的文檔，過濾器內所有鍵均需存在)(可從索引前綴進行匹配)(注意與 unique 屬性的搭配)
-$ db.sessions.createIndex({ createdAt: 1 }, { expireAfterSeconds: 10 }) # 將索引設為 TTL 索引 (一定時間後自動從集合中刪除文檔)(過期閾值為索引字段值加上指定的秒數)(僅支持日期或日期陣列字段)(僅支持單字段索引)(不保證過期文檔會被立即刪除，參考 ttlMonitorSleepSecs 選項)
+$ db.sessions.createIndex({ createdAt: 1 }, { expireAfterSeconds: 10 }) # 將索引設為 TTL 索引 (一定時間後自動從集合中刪除文檔)(過期閾值為索引字段值加上指定的秒數)(僅支持日期或日期陣列字段)(僅支持單字段索引)(過去或未來時間皆會加上指定秒數，創建索引時立即判斷，在 ttl 設為 1 的情況，還是過期的文檔會直接刪除)(不保證過期文檔會被立即刪除，參考 ttlMonitorSleepSecs 選項)
 
 --- ttlMonitorSleepSecs
 
