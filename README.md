@@ -711,7 +711,7 @@ $ db.contacts.explain("allPlansExecution").find({ "dob.age": { $gt: 60 }}) # 使
 
 ```shell
 $ db.contacts.getIndexes() # 取得集合索引
-$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)(從 COLLSCAN 改而使用 IXSCAN、FETCH、COUNT_SCAN)(鍵相同時排序必須不同 -> 無法建立僅選項不同的相同索引 -> 無法建立索引名稱相同的不同索引)
+$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)(具備 pointer 及 field value)(從 COLLSCAN 改而使用 IXSCAN、FETCH、COUNT_SCAN、PROJECTION_COVERED...)(鍵相同時排序必須不同 -> 無法建立僅選項不同的相同索引 -> 無法建立索引名稱相同的不同索引)
 $ db.contacts.dropIndex({ "dob.age": 1 }) # 刪除索引 (可透過索引名稱或文檔將其刪除)
 
 ---
@@ -753,4 +753,23 @@ $ db.sessions.createIndex({ createdAt: 1 }, { expireAfterSeconds: 10 }) # 將索
 
 $ db.adminCommand({ getParameter:1, ttlMonitorSleepSecs: 1 }) # 查看 ttl 睡眠間隔 (預設為 60 秒)
 $ db.adminCommand({ setParameter:1, ttlMonitorSleepSecs: 60 }) # 修改 ttl 睡眠間隔 (以秒為單位)
+
+--- covered query
+
+$ db.users.createIndex({ name: 1 }) # && db.users.createIndex({ age: 1 })
+$ db.users.explain("executionStats").find({ name: "Max" }, { _id: 0, name: 1 }) # 覆蓋查詢 (查詢與投影僅具有索引字段值時觸發)(透過 PROJECTION_COVERED 跳過 FETCH 中的 docsExamined 加速查詢)
+$ db.users.explain("executionStats").find({ name: "Max" }, { _id: 0, age: 1 }) # 無法觸發覆蓋查詢
+$ db.users.explain("executionStats").find({ name: "Max" }, { _id: 0, name: 1, age: 1 }) # 無法觸發覆蓋查詢
+$ db.users.explain("executionStats").find({ name: "Max", age: { $gte: 20 }}, { _id: 0, name: 1 }) # 無法觸發覆蓋查詢
+
+
+$ db.users.createIndex({ name: 1, age: 1 })
+$ db.users.explain("executionStats").find({ name: "Max", age: { $gt: 20 }}, { _id: 0, name: 1, age: 1 }) # 覆蓋查詢 (查詢與投影僅具有索引字段值時觸發)(索引前綴也適用，投影在索引字段中包含其一也能作用)(透過 PROJECTION_COVERED 跳過 FETCH 中的 docsExamined 加速查詢)
+$ db.users.explain("executionStats").find({ name: "Max", age: { $gt: 20 }}, { _id: 0, name: 1 }) # 成功觸發覆蓋查詢
+$ db.users.explain("executionStats").find({ name: "Max", age: { $gt: 20 }}, { _id: 0, age: 1 }) # 成功觸發覆蓋查詢
+$ db.users.explain("executionStats").find({ name: "Max" }, { _id: 0, name: 1, age: 1 }) # 成功觸發覆蓋查詢
+$ db.users.explain("executionStats").find({ name: "Max" }, { _id: 0, name: 1 }) # 成功觸發覆蓋查詢
+$ db.users.explain("executionStats").find({ name: "Max" }, { _id: 0, age: 1 }) # 成功觸發覆蓋查詢
+
+# ... db.users.find().count()
 ```
