@@ -772,4 +772,10 @@ $ db.users.explain("executionStats").find({ name: "Max" }, { _id: 0, name: 1 }) 
 $ db.users.explain("executionStats").find({ name: "Max" }, { _id: 0, age: 1 }) # 成功觸發覆蓋查詢
 
 # ... db.users.find().count()
+
+--- winning plans / rejected Plans
+
+$ db.users.createIndex({ name: 1 })
+$ db.users.createIndex({ age: 1, name: 1 })
+$ db.users.explain().find({ name: "Max", age: 30 }) # MongoDB 透過索引間彼此競爭 (方法比較) 找出最有效率的獲勝計畫並緩存，未來查詢完全相同時將使用，查詢鍵或值不同時將再次進行。緩存可能被釋放 (插入 1000 個文檔、重新建立索引、新增或刪除其他索引、重啟服務)
 ```
