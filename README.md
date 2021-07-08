@@ -230,6 +230,21 @@ $ db.sports.find({ "colors.v": { $gte: 25, $lte: 30 } }) # 多條件查詢 (可�
 $ db.sports.find({ "colors.v": { $lte: 30 }, "colors.color": "blue" }) # 多條件查詢 (可能不同項目)
 $ db.sports.find({ colors: { $elemMatch: { v: { $gte: 25, $lte: 30 }}}}) # 多條件查詢 (同一項目)
 $ db.sports.find({ "colors.0.v": { $lte: 5 }}) # 指定索引查詢
+
+---
+
+$ db.movies.explain("executionStats").find({ "image.medium": { $regex: /medium_portrait/ }, "image.original": { $regex: /original_untouched/ }}) # 即使用 $and (須使用嵌入字段索引而不是嵌入文檔索引)
+$ db.movies.explain("executionStats").find({ image: { medium: { $regex: /medium_portrait/ }, original: { $regex: /original_untouched/ }}}) # 不存在此種寫法，精確匹配不能使用運算符 (參考以下)
+$ db.movies.explain("executionStats").find({ image: { medium: "http://static.tvmaze.com/uploads/images/medium_portrait/0/61.jpg", original: "http://static.tvmaze.com/uploads/images/original_untouched/0/61.jpg" }}) # 嵌入文檔使用精確匹配 (全部值都得存在、少一個多一個都不行，順序必須相同)
+
+--- use index but not match document
+
+$ db.movies.createIndex({ image: 1 })
+$ db.movies.explain("executionStats").find({ image: { medium: "http://static.tvmaze.com/uploads/images/medium_portrait/0/61.jpg" }}) # 使用索引，但因少一個鍵而匹配不到文檔
+$ db.movies.explain("executionStats").find({ image: { original: "http://static.tvmaze.com/uploads/images/original_untouched/0/61.jpg" }}) # 使用索引，但因少一個鍵而匹配不到文檔
+$ db.movies.explain("executionStats").find({ image: { medium: "http://static.tvmaze.com/uploads/images/medium_portrait/0/61.jpg", original: "http://static.tvmaze.com/uploads/images/original_untouched/0/61.jpg", v: 1 }}) # 使用索引，但因多一個鍵而匹配不到文檔
+$ db.movies.explain("executionStats").find({ image: { original: "http://static.tvmaze.com/uploads/images/original_untouched/0/61.jpg",  medium: "http://static.tvmaze.com/uploads/images/medium_portrait/0/61.jpg" }}) # 此用索引，但因鍵順序有誤而匹配不到文檔
+$ db.movies.explain("executionStats").find({ image: { medium: { $eq: "http://static.tvmaze.com/uploads/images/medium_portrait/0/61.jpg" }, original: { $eq: "http://static.tvmaze.com/uploads/images/original_untouched/0/61.jpg" }}}) # 使用索引，但因寫法錯誤而匹配不到文檔
 ```
 
 ### 關聯查詢
@@ -711,7 +726,7 @@ $ db.contacts.explain("allPlansExecution").find({ "dob.age": { $gt: 60 }}) # 使
 
 ```shell
 $ db.contacts.getIndexes() # 取得集合索引
-$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)(具備 pointer 及 field value)(從 COLLSCAN 改而使用 IXSCAN、FETCH、COUNT_SCAN、PROJECTION_COVERED...)(鍵相同時排序必須不同 -> 無法建立僅選項不同的相同索引 -> 無法建立索引名稱相同的不同索引)
+$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)(具備 pointer 及 field value)(從 COLLSCAN 改而使用 IXSCAN、FETCH、COUNT_SCAN、PROJECTION_COVERED...)(鍵相同時排序必須不同 -> 無法建立僅選項不同的相同索引 -> 無法建立索引名稱相同的不同索引)(索引字段為嵌入文檔時，查詢只要使用字段即可套用索引，如同單字段索引般，搭配精準匹配可以實際獲取文檔，可參考之前範例)
 $ db.contacts.dropIndex({ "dob.age": 1 }) # 刪除索引 (可透過索引名稱或文檔將其刪除)
 
 ---
