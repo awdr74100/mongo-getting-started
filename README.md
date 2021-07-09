@@ -726,8 +726,9 @@ $ db.contacts.explain("allPlansExecution").find({ "dob.age": { $gt: 60 }}) # 使
 
 ```shell
 $ db.contacts.getIndexes() # 取得集合索引
-$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)(具備 pointer 及 field value)(從 COLLSCAN 改而使用 IXSCAN、FETCH、COUNT_SCAN、PROJECTION_COVERED...)(鍵相同時排序必須不同 -> 無法建立僅選項不同的相同索引 -> 無法建立索引名稱相同的不同索引)(索引字段為嵌入文檔時，查詢只要使用字段即可套用索引，如同單字段索引般，搭配精準匹配可以實際獲取文檔，可參考之前範例)
-$ db.contacts.dropIndex({ "dob.age": 1 }) # 刪除索引 (可透過索引名稱或文檔將其刪除)
+$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)(具備 pointer 及 field value)(從 COLLSCAN 改而使用 IXSCAN、FETCH、COUNT_SCAN、PROJECTION_COVERED...)(鍵相同時排序必須不同 -> 無法建立僅選項不同的相同索引 -> 無法建立索引名稱相同的不同索引)(索引字段為嵌入文檔時，查詢只要使用字段即可套用索引，如同單字段索引般，模式依然遵循精準匹配定義，可參考之前範例)
+$ db.contacts.dropIndex({ "dob.age": 1 }) # 刪除單個索引 (可傳入索引名稱、索引規範文檔進行刪除，_id 索引除外)
+$ db.contacts.dropIndexes({ "dob.age": 1 }) # 刪除單個或多個索引 (可傳入索引名稱、索引規範文檔、索引名稱陣列進行刪除，_id 索引除外)(傳入為空表示刪除 _id 以外所有索引)
 
 ---
 
