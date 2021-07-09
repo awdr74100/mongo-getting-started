@@ -726,7 +726,7 @@ $ db.contacts.explain("allPlansExecution").find({ "dob.age": { $gt: 60 }}) # 使
 
 ```shell
 $ db.contacts.getIndexes() # 取得集合索引
-$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)(具備 pointer 及 field value)(從 COLLSCAN 改而使用 IXSCAN、FETCH、COUNT_SCAN、PROJECTION_COVERED...)(鍵相同時排序必須不同 -> 無法建立僅選項不同的相同索引 -> 無法建立索引名稱相同的不同索引)(索引字段為嵌入文檔時，查詢只要使用字段即可套用索引，如同單字段索引般，模式依然遵循精準匹配定義，可參考之前範例)
+$ db.contacts.createIndex({ "dob.age": 1 }) # 建立索引 (1 表示升序、-1 表示降序)(具備 pointer 及 field value)(從 COLLSCAN 改而使用 IXSCAN、FETCH、COUNT_SCAN、PROJECTION_COVERED...)(鍵相同時排序必須不同 -> 無法建立僅選項不同的相同索引 -> 無法建立索引名稱相同的不同索引)(索引字段為嵌入文檔時，傳入索引字段 (格式符合即可) 即套用索引，查詢遵循精準匹配定義，滿足兩個條件才能如預期使用索引查詢，可參考之前範例)
 $ db.contacts.dropIndex({ "dob.age": 1 }) # 刪除單個索引 (可傳入索引名稱、索引規範文檔進行刪除，_id 索引除外)
 $ db.contacts.dropIndexes({ "dob.age": 1 }) # 刪除單個或多個索引 (可傳入索引名稱、索引規範文檔、索引名稱陣列進行刪除，_id 索引除外)(傳入為空表示刪除 _id 以外所有索引)
 
@@ -734,6 +734,7 @@ $ db.contacts.dropIndexes({ "dob.age": 1 }) # 刪除單個或多個索引 (可�
 
 $ db.contacts.createIndex({ "dob.age": 1 }) # 創建單字段索引 (索引鍵的升降序不重要，對於 sort 來說，MongoDB 可從任一方向遍歷索引)
 $ db.contacts.createIndex({ "dob.age": 1, gender: 1 }) # 創建複合索引 (存在排序順序之分)(索引可由左至右組合使用，必須與第一個鍵搭配)(查詢鍵順序不影響排列順序)(索引鍵的升降序很重要，對於 sort 來說，必須與其匹配或逆匹配，且須按照它們在索引中出現的順序列出)
+$ db.contacts.createIndex({ hobbies: 1 }) # 創建多鍵索引 (索引字段為數組時自動定義)(提取陣列每個項目成為索引單個鍵，鍵只會出現一次，單個鍵可指向多個文檔)(排列順序為索引鍵列由左至右，即升降序後從左至右尋找)(複合索引內的多鍵索引最多存在一個，插入或創建時違反將報錯)
 
 --- remark
 
@@ -794,4 +795,15 @@ $ db.users.explain("executionStats").find({ name: "Max" }, { _id: 0, age: 1 }) #
 $ db.users.createIndex({ name: 1 })
 $ db.users.createIndex({ age: 1, name: 1 })
 $ db.users.explain().find({ name: "Max", age: 30 }) # MongoDB 透過索引間彼此競爭 (方法比較) 找出最有效率的獲勝計畫並緩存，未來查詢完全相同時將使用，查詢鍵或值不同時將再次進行。緩存可能被釋放 (插入 1000 個文檔、重新建立索引、新增或刪除其他索引、重啟服務)
+
+--- multikey index
+
+$ db.contacts.createIndex({ name: 1, hobbies: 1 }) # 多鍵索引可以成為複合索引的一部分
+$ db.contacts.createIndex({ addresses: 1, hobbies: 1 }) # 複合索引內的多鍵索引最多存在一個，插入或創建時違反將報錯並取消創建，如此例
+
+$ db.contacts.createIndex({ hobbies: 1 }) # 多鍵索引為普通陣列時，一般陣列查詢即可套用索引
+$ db.contacts.createIndex({ addresses: 1 }) # 多鍵索引為嵌入文檔時，傳入索引嵌入文檔 (格式符合即可) 即套用索引，查詢遵循精準匹配定義 (值、順序、長度)，滿足兩個條件才能如預期使用索引查詢
+$ db.contacts.createIndex({ "addresses.street": 1 }) # 多鍵索引為嵌入字段時，傳入索引嵌入字段 (格式符合即可) 即套用索引，查詢遵循普通陣列匹配定義，包含 $elemMatch 等運算符，概念如同普通陣列索引查詢
+
+$ db.contacts.createIndex({ "addresses.street": 1, "addresses.code": 1 }) # 複合索引內可具有多個隸屬於同個陣列的嵌入字段，而嵌入字段最多指向一個陣列的規則也適用，即避免一個以上的數組存在
 ```
